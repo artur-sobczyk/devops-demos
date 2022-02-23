@@ -8,7 +8,7 @@
 `7z a -r StaticPage.zip ./StaticPage/*`
 
 # deploy artifact to s3
-`aws deploy push --application-name CodeDeploy-Demo --source StaticPage --s3-location s3://$SRC_BUCKET/StaticPage.zip`
+`aws deploy push --application-name StaticPage --source StaticPage --s3-location s3://$SRC_BUCKET/StaticPage.zip`
 
 ```
 aws deploy create-deployment \
@@ -25,9 +25,9 @@ aws deploy create-deployment \
 
 ```
 #!/bin/bash
-sudo yum update
-sudo yum install ruby
-sudo yum install wget
+sudo yum -y update
+sudo yum -y install ruby
+sudo yum -y install wget
 
 cd /home/ec2-user
 wget https://aws-codedeploy-eu-west-1.s3.eu-west-1.amazonaws.com/latest/install
