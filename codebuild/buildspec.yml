@@ -1,0 +1,29 @@
+#https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
+version: 0.2
+
+env:
+  variables:
+    MY_VARIABLE: "Some text"
+
+phases: 
+    install:
+        runtime-versions:
+            nodejs: 14
+        commands:
+            - echo "install phase"
+            - echo MY_VARIABLE=$MY_VARIABLE
+    pre_build:
+        commands: 
+            - echo "pre_build phase"
+    build:
+        commands:
+            - echo "build phase"
+        finally:
+            - echo This always runs even if the install command fails
+    post_build:
+        commands:
+            - echo "post_build phase"
+artifacts:
+  files:
+    - index.html
+            

@@ -1,4 +1,5 @@
 # Prepare
+
 - EC2 Lunch template with user data, and permissios to SSM: 
     ```
     #!/bin/bash
@@ -17,6 +18,8 @@
 - ASG with ELB
 - Code Deply application
 - Code Deply deployment group
+
+-----------------------------------------------------------------------------------------
 
 # deploy to S3
 `SRC_BUCKET=artsobcz-deployments-src`
