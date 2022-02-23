@@ -1,3 +1,23 @@
+# Prepare
+- EC2 Lunch template with user data, and permissios to SSM: 
+    ```
+    #!/bin/bash
+    yum -y update
+    yum -y install ruby
+    yum -y install wget
+
+    cd /home/ec2-user
+    wget https://aws-codedeploy-eu-west-1.s3.eu-west-1.amazonaws.com/latest/install
+    chmod +x ./install
+
+    ./install auto
+    service codedeploy-agent start
+
+    ```
+- ASG with ELB
+- Code Deply application
+- Code Deply deployment group
+
 # deploy to S3
 `SRC_BUCKET=artsobcz-deployments-src`
 
@@ -23,17 +43,3 @@ aws deploy create-deployment \
 # prepare instances
 # https://docs.aws.amazon.com/codedeploy/latest/userguide/codedeploy-agent-operations-install-linux.html
 
-```
-#!/bin/bash
-sudo yum -y update
-sudo yum -y install ruby
-sudo yum -y install wget
-
-cd /home/ec2-user
-wget https://aws-codedeploy-eu-west-1.s3.eu-west-1.amazonaws.com/latest/install
-chmod +x ./install
-
-sudo ./install auto
-sudo service codedeploy-agent start
-
-```
