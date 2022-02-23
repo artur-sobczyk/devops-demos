@@ -4,7 +4,7 @@
 `sam build --use-container`
 
 # test localy
-`sam local invoke FreeAwsLabsFunction`
+`sam local invoke AllLoggingFunction`
 
 # test in container
 `sam local start-api`
