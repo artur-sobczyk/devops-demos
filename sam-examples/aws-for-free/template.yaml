@@ -3,11 +3,50 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   function returning html with links to free labs
 
+Parameters:
+  Stage:
+    Type: String
+    Default: api
+
 Resources:
+  ApiDeployment:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Stage
+      Cors:
+        AllowMethods: "'OPTIONS,GET'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+
+  FreeAwsLabsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey: 
+        Name: lab_name
+        Type: String
+      TableName: FreeAwsLabsTable
+  
+  RefreshFreeAwsLabsFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: src/refresh/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Timeout: 100
+      MemorySize: 1024
+      Events:
+        InvocationLevel:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 2 ? * * *)
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FreeAwsLabsTable
+
   FreeAwsLabsFunction:
     Type: AWS::Serverless::Function 
     Properties:
-      CodeUri: lambda/
+      CodeUri: src/read/
       Handler: app.lambda_handler
       Runtime: python3.8
       Timeout: 100
@@ -18,8 +57,44 @@ Resources:
           Properties:
             Path: /
             Method: get
+            RestApiId: !Ref ApiDeployment
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FreeAwsLabsTable
+
+  ApiDomainName:
+    Type: AWS::ApiGateway::DomainName
+    DeletionPolicy: Retain
+    Properties:
+      DomainName: aws-for-free.artsobcz.pl
+      RegionalCertificateArn: arn:aws:acm:eu-west-1:695414717878:certificate/e5f7d366-126f-4183-8d7a-f35b1115d6c1
+      EndpointConfiguration: 
+        Types:
+          - REGIONAL
+      SecurityPolicy: TLS_1_2
+
+  ApiRecordSetGroup:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: artsobcz.pl.
+
+      RecordSets:
+        - Name: aws-for-free.artsobcz.pl.
+          Type: A
+          AliasTarget:
+            HostedZoneId: !GetAtt ApiDomainName.RegionalHostedZoneId
+            DNSName: !GetAtt ApiDomainName.RegionalDomainName
+
+  UrlMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    DependsOn:
+      - ApiDeployment
+    Properties:
+      DomainName: !Ref ApiDomainName
+      RestApiId:  !Ref ApiDeployment
+      Stage: !Ref Stage
 
 Outputs:
   HelloWorldApi:
     Description: "API Gateway endpoint URL for Prod stage"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/joke/"
+    Value: !Sub "https://${ApiDeployment}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/"
