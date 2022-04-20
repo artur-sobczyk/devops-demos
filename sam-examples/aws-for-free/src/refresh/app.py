@@ -1,12 +1,21 @@
 import requests
+import logging
 from bs4 import BeautifulSoup
+import boto3
+
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.core import patch_all
+xray_recorder.configure()
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+patch_all()
 
 url = 'https://amazon.qwiklabs.com/catalog'
 
 # find tuples wtih free resources in html file
+@xray_recorder.capture('## find_free_entries')
 def find_free_entries(url):
-
-    #print(f"url - {url}")
 
     r = requests.get(url)
 
@@ -21,28 +30,29 @@ def find_free_entries(url):
 
     return list
 
-results = []
-
-# iterate over all pages with labd in catalogs
-for i in range(1,14):
-    if(i == 1):
-        req_url = url
-    else:
-        req_url = url + f"?page={i}"
-
-    results.extend(find_free_entries(req_url))
-
 def lambda_handler(event, context):
 
-    import boto3
+    results = []
+    
+    # iterate over all pages with labd in catalogs
+    for i in range(1,14):
+        if(i == 1):
+            req_url = url
+        else:
+            req_url = url + f"?page={i}"
+
+        results.extend(find_free_entries(req_url))
+
 
     # Get the service resource.
     table = boto3.resource('dynamodb').Table('FreeAwsLabsTable')
     
     scan = table.scan()
-    with table.batch_writer() as batch:
-      for i in scan['Items']:
-        batch.delete_item(Key=i)
+
+    if scan['Count'] > 0:
+        with table.batch_writer() as batch:
+            for i in scan['Items']:
+                batch.delete_item(Key={'lab_name': i['lab_name']})
 
     for i in results:
         table.put_item(Item = {

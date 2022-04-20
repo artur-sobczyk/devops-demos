@@ -1,0 +1,4 @@
+requests
+bs4
+yattag
+aws-xray-sdk==2.4.3

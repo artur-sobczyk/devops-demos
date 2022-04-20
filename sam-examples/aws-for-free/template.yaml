@@ -12,6 +12,7 @@ Resources:
   ApiDeployment:
     Type: AWS::Serverless::Api
     Properties:
+      TracingEnabled: true
       StageName: !Ref Stage
       Cors:
         AllowMethods: "'OPTIONS,GET'"
@@ -34,6 +35,7 @@ Resources:
       Runtime: python3.8
       Timeout: 100
       MemorySize: 1024
+      Tracing: Active
       Events:
         InvocationLevel:
           Type: Schedule
@@ -42,6 +44,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref FreeAwsLabsTable
+      Layers:
+        - !Ref AwsForFreeLayer
 
   FreeAwsLabsFunction:
     Type: AWS::Serverless::Function 
@@ -50,7 +54,8 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.8
       Timeout: 100
-      MemorySize: 1024
+      MemorySize: 1024      
+      Tracing: Active
       Events:
         FreeAwsLabsApi:
           Type: Api 
@@ -61,6 +66,19 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref FreeAwsLabsTable
+      Layers:
+        - !Ref AwsForFreeLayer
+
+  AwsForFreeLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: src/dependencies/
+      CompatibleRuntimes:
+        - python3.8
+    Metadata:
+      BuildMethod: makefile
+    RetentionPolicy: Delete
+
 
   ApiDomainName:
     Type: AWS::ApiGateway::DomainName
