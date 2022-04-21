@@ -1,0 +1,43 @@
+#!/bin/bash
+
+#  prepare frontend resources
+rm -rf .aws-sam/static
+mkdir -p .aws-sam/static
+cp -r static/* .aws-sam/static
+
+# find cognito pool id and update frontend
+IDENTITY_POOL_ID=`aws cognito-identity list-identity-pools --max-results 10 --query "IdentityPools[?starts_with(IdentityPoolName, 'SlotPositionCognitoIdentityPool')].IdentityPoolId" --output text`
+sed "s/IDENTITY_POOL_ID/$IDENTITY_POOL_ID/g" static/index.html > .aws-sam/static/index.html
+
+# sync frontend into bucket
+BUCKET=`aws s3api list-buckets --query "Buckets[?starts_with(Name, 'slot-position')].Name" --output text`
+aws s3 sync .aws-sam/static "s3://$BUCKET"
+
+python - << EOF
+import boto3
+
+data = [
+    { 'slotPosition': 0, 'imageFile': 'spad_a.png' },
+    { 'slotPosition': 1 , 'imageFile': 'spad_k.png' },
+    { 'slotPosition': 2 , 'imageFile': 'spad_q.png' },
+    { 'slotPosition': 3 , 'imageFile': 'spad_j.png' },
+    { 'slotPosition': 4 , 'imageFile': 'hart_a.png' },
+    { 'slotPosition': 5 , 'imageFile': 'hart_k.png' },
+    { 'slotPosition': 6 , 'imageFile': 'hart_q.png' },
+    { 'slotPosition': 7 , 'imageFile': 'hart_j.png' },
+    { 'slotPosition': 8 , 'imageFile': 'diam_a.png' },
+    { 'slotPosition': 9 , 'imageFile': 'diam_j.png' },
+    { 'slotPosition': 10 , 'imageFile': 'diam_k.png' },
+    { 'slotPosition': 11 , 'imageFile': 'diam_q.png' },
+    { 'slotPosition': 12 , 'imageFile': 'club_a.png' },
+    { 'slotPosition': 13 , 'imageFile': 'club_j.png' },
+    { 'slotPosition': 14 , 'imageFile': 'club_k.png' },
+    { 'slotPosition': 15 , 'imageFile': 'club_q.png' }
+]
+
+table = boto3.resource('dynamodb').Table('SlotPositionTable')
+
+for i in data:
+    print(f"putting item: {i}")
+    table.put_item(Item=i)
+EOF

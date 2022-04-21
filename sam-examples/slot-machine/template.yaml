@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: slot machine
+
+Resources:
+
+  # architecture
+  SlotPositionTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey: 
+        Name: slotPosition
+        Type: Number
+      TableName: SlotPositionTable
+
+  SlotPositionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SlotPositionFunction
+      Handler: app.handler
+      Runtime: nodejs14.x
+      CodeUri: src/
+      Policies:
+        DynamoDBReadPolicy:
+          TableName: !Ref SlotPositionTable
+          
+  LambdaInvocationRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      RoleName: LambdaInvocationRole
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated:
+                - cognito-identity.amazonaws.com
+            Action:
+              - 'sts:AssumeRoleWithWebIdentity'
+            Condition:
+              StringEquals: 
+                "cognito-identity.amazonaws.com:aud": !Ref SlotPositionCognitoIdentityPool
+      Policies: 
+        - PolicyName: LambdaInvocationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 'lambda:InvokeFunction'
+                Resource: !GetAtt SlotPositionFunction.Arn
+    
+    
+  # Cognito identity pool for anoymous access  
+  SlotPositionCognitoIdentityPool:  
+    Type: AWS::Cognito::IdentityPool
+    Properties: 
+      IdentityPoolName: SlotPositionCognitoIdentityPool
+      AllowUnauthenticatedIdentities: true
+
+  IdentityPoolRoleMapping:
+    Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+    Properties:
+      IdentityPoolId: !Ref SlotPositionCognitoIdentityPool
+      Roles:
+        authenticated: !GetAtt LambdaInvocationRole.Arn
+        unauthenticated: !GetAtt LambdaInvocationRole.Arn
+        
+        
+  # bucket for hosting static webside, requires removal of global block public access    
+  SlotPositionS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: slot-position-demo-bucket
+  
+  SlotPositionS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref SlotPositionS3Bucket
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 's3:GetObject'
+            Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt SlotPositionOAI.S3CanonicalUserId
+            Resource:
+              - !Sub 'arn:aws:s3:::${SlotPositionS3Bucket}/*'
+
+  # cloud front configuration:
+  SlotMachineDistribution:
+    Properties:
+      DistributionConfig:
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - 'HEAD'
+            - 'GET'
+          CachedMethods:
+            - 'HEAD'
+            - 'GET'
+          Compress: false
+          DefaultTTL: 86400
+          ForwardedValues:
+            Cookies:
+              Forward: 'none'
+            Headers:
+              - 'Origin'
+            QueryString: false
+          MaxTTL: 31536000
+          MinTTL: 86400
+          TargetOriginId: !Sub 's3-origin-${SlotPositionS3Bucket}'
+          ViewerProtocolPolicy: 'redirect-to-https'
+        DefaultRootObject: 'index.html'
+        Enabled: true
+        HttpVersion: 'http1.1'
+        IPV6Enabled: false
+        Origins:
+          - DomainName: !GetAtt SlotPositionS3Bucket.DomainName
+            Id: !Sub 's3-origin-${SlotPositionS3Bucket}'
+            OriginPath: ''
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${SlotPositionOAI}'
+        PriceClass: 'PriceClass_All'
+    Type: 'AWS::CloudFront::Distribution'
+
+  SlotPositionOAI:
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: 'Access S3 bucket content only through CloudFront'
+    Type: 'AWS::CloudFront::CloudFrontOriginAccessIdentity'
+
+Outputs:
+
+  CognitioIdentityPoolId:
+    Description: "update static frontend with it"
+    Value: !Ref SlotPositionCognitoIdentityPool
+    
+  CopyFrontendCommand:
+    Description: "copy frontnend here"
+    Value: !Sub aws s3 sync ./static s3://${SlotPositionS3Bucket}
