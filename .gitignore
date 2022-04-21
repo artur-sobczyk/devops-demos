@@ -1,3 +1,9 @@
 tmp/
 *zip
 .aws-sam/
+
+.LAST_BUILD
+*.snk
+*.js
+*.d.ts
+*.swp
