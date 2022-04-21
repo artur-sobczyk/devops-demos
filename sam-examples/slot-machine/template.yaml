@@ -88,8 +88,15 @@ Resources:
 
   # cloud front configuration:
   SlotMachineDistribution:
+    Type: 'AWS::CloudFront::Distribution'
     Properties:
       DistributionConfig:
+        Aliases: 
+        - 'slot-machine.artsobcz.pl'
+        ViewerCertificate: 
+          AcmCertificateArn: 'arn:aws:acm:us-east-1:695414717878:certificate/076898a8-6e34-4154-b809-beae4850b170'
+          SslSupportMethod: "sni-only"
+          MinimumProtocolVersion: "TLSv1.2_2021"
         DefaultCacheBehavior:
           AllowedMethods:
             - 'HEAD'
@@ -114,13 +121,12 @@ Resources:
         HttpVersion: 'http1.1'
         IPV6Enabled: false
         Origins:
-          - DomainName: !GetAtt SlotPositionS3Bucket.DomainName
+          - DomainName: !GetAtt SlotPositionS3Bucket.RegionalDomainName
             Id: !Sub 's3-origin-${SlotPositionS3Bucket}'
             OriginPath: ''
             S3OriginConfig:
               OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${SlotPositionOAI}'
         PriceClass: 'PriceClass_All'
-    Type: 'AWS::CloudFront::Distribution'
 
   SlotPositionOAI:
     Properties:
@@ -128,6 +134,17 @@ Resources:
         Comment: 'Access S3 bucket content only through CloudFront'
     Type: 'AWS::CloudFront::CloudFrontOriginAccessIdentity'
 
+  # cloud front domain
+  SlotMachineSetGroup:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: artsobcz.pl.
+      RecordSets:
+        - Name: slot-machine.artsobcz.pl.
+          Type: A
+          AliasTarget:
+            HostedZoneId: 'Z2FDTNDATAQYW2'
+            DNSName: !GetAtt SlotMachineDistribution.DomainName
 Outputs:
 
   CognitioIdentityPoolId:

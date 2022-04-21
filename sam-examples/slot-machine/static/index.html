@@ -22,7 +22,7 @@ AWS.config.credentials = new AWS.CognitoIdentityCredentials({
 	/// Prepare to call Lambda function
 	lambda = new AWS.Lambda();
 	var pullParams = {
-		FunctionName : 'SlotPositionLambda',
+		FunctionName : 'SlotPositionFunction',
 		InvocationType : 'RequestResponse',
 		LogType : 'None'
 	};

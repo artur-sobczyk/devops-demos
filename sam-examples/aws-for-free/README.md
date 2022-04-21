@@ -3,13 +3,6 @@
 # build
 `sam build --use-container`
 
-# test localy
-`sam local invoke FreeAwsLabsFunction`
-
-# test in container
-`sam local start-api`
-`curl http://127.0.0.1:3000/`
-
 # deploy
 `sam deploy`
 

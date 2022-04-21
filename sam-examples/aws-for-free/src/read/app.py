@@ -1,6 +1,9 @@
 import boto3
 import logging
 
+from yattag import Doc
+from yattag import indent
+
 from aws_xray_sdk.core import xray_recorder
 from aws_xray_sdk.core import patch_all
 xray_recorder.configure()
@@ -20,9 +23,7 @@ def get_doc():
         for i in scan['Items']:
             results.append([i['lab_name'], i['url']])
 
-    # render returned HTML file
-    from yattag import Doc
-    from yattag import indent
+    
 
     doc, tag, text = Doc().tagtext()
 
