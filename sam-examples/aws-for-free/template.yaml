@@ -40,7 +40,7 @@ Resources:
         InvocationLevel:
           Type: Schedule
           Properties:
-            Schedule: cron(0 2 ? * * *)
+            Schedule: cron(0 9 ? * * *)
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref FreeAwsLabsTable
